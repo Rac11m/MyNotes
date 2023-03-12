@@ -11,12 +11,17 @@ class NoteService {
   List<DatabaseNote> _notes = [];
 
   static final NoteService _shared = NoteService._sharedInstance();
-  NoteService._sharedInstance();
+  NoteService._sharedInstance() {
+    _notesStreamController = StreamController<List<DatabaseNote>>.broadcast(
+      onListen: () {
+        _notesStreamController.sink.add(_notes);
+      },
+    );
+  }
 
   factory NoteService() => _shared;
 
-  final _notesStreamController =
-      StreamController<List<DatabaseNote>>.broadcast();
+  late final StreamController<List<DatabaseNote>> _notesStreamController;
 
   Stream<List<DatabaseNote>> get allNotes => _notesStreamController.stream;
 
@@ -153,7 +158,7 @@ class NoteService {
     final db = _getDatabaseOrThrow();
 
     final notes = await db.query(
-      userTable,
+      noteTable,
       limit: 1,
       where: 'id = ?',
       whereArgs: [id],
@@ -176,10 +181,6 @@ class NoteService {
 
     final notes = await db.query(noteTable);
 
-    if (notes.isEmpty) {
-      throw CouldNotFindNote();
-    }
-
     return notes.map((noteRow) => DatabaseNote.fromRow(noteRow));
   }
 
@@ -191,10 +192,15 @@ class NoteService {
     // make sure note exists
     await getNote(id: note.id);
 
-    final updatesCount = await db.update(noteTable, {
-      textColumn: text,
-      isSyncedWithCloudColumn: 0,
-    });
+    final updatesCount = await db.update(
+      noteTable,
+      {
+        textColumn: text,
+        isSyncedWithCloudColumn: 0,
+      },
+      where: 'id = ?',
+      whereArgs: [note.id],
+    );
 
     if (updatesCount == 0) {
       throw CouldNotUpdateNote();
