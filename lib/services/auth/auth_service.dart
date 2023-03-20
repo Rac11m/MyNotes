@@ -35,4 +35,8 @@ class AuthService implements AuthProvider {
 
   @override
   Future<void> sendEmailVerification() => provider.sendEmailVerification();
+
+  @override
+  Future<void> sendPasswordRest({required String toEmail}) =>
+      provider.sendPasswordRest(toEmail: toEmail);
 }
